@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Support app</title>
+    <link rel="stylesheet" type="text/css" href="../../public/css/signUpSuccess.css" />
+  </head>
+  <body>
+    <template id="my-template">
+    </template>
+  </body>
+</html>
+<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  Swal.fire({
+    template: '#my-template',
+    icon:"success",
+    title:"Registro exitoso",
+    text: 'Su cuenta está activa.',
+    footer:" ",
+    width:"310px",
+    showConfirmButton:false,
+    allowOutsideClick:false,
+    timer: 3000,
+    timerProgressBar: true,
+  })
+
+  setTimeout(()=>{
+    window.close();
+  },3000);
+
+  
+</script>
