@@ -24,3 +24,7 @@ export const nodeMailer = {
   email: 'admasistencia.app@gmail.com',
   password: 'vplujgyqvajfppxy'
 }
+
+export const server = {
+  origin: process.env.ORIGIN
+}
