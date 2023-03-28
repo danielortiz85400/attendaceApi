@@ -1,6 +1,6 @@
 import { pool } from '../../db.js'
 import { io } from '../../index.js'
-
+import { v4 as uuidv4 } from 'uuid'
 import { encryptPassword } from '../../utils/hashPasswords.js'
 import { jwtCreate } from '../../utils/jsonWebToken.js'
 import { emailJwt } from '../../configEnv.js'
@@ -25,17 +25,18 @@ export const assisConfirmation = async (req, res) => {
 export const signUpPlayer = async ({ body }, res) => {
   const { email, password, nick, name, ctr, phone, nameServer } = body
 
+  const id = uuidv4()
   const inserts = [
     {
       cols:
           'INSERT INTO sign_in (id,email,password, user_role, role_permissions, status, token) VALUES(?,?,?,?,?,?,?)',
-      values: [null, email, encryptPassword(password), 'USUARIO', '["USUARIO", "USUARIO"]', false, jwtCreate(email, emailJwt.jwt).token]
+      values: [id, email, encryptPassword(password), 'USUARIO', '["USUARIO", "USUARIO"]', false, jwtCreate(email, emailJwt.jwt).token]
     },
 
     {
       cols:
             'INSERT INTO signup_players  (id, nick, name , ctr, phone, attendance, name_server)  VALUES(?,?,?,?,?,?,?)',
-      values: [null, nick, name, ctr, phone, false, nameServer]
+      values: [id, nick, name, ctr, phone, false, nameServer]
     }
   ]
 

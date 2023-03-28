@@ -8,6 +8,11 @@ export const useSocket = (io) => {
     console.log('Un cliente se ha conectado')
     // carga de rutas con peticiones ALL
 
+    //* TODOS LOS JUGADORES REGISTRADOS
+    pool.query('SELECT * FROM signup_players').then(([rows]) => {
+      socket.emit('allSignupPlayers', rows)
+    })
+
     //* TODOS LOS JUGADORES CONFIRMADOS AL EVENTO
     pool.query('SELECT * FROM confirmed_players').then(([rows]) => {
       socket.emit('allconfirmPlayers', rows)
