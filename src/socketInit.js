@@ -19,15 +19,15 @@ export const useSocket = (io) => {
     })
 
     //* TODOS LOS SQUADS CREADOS
+
     pool
       .query(
-            `
-        select s.id as id_squad, s.name_tactic, 
-        p.id, p.leader, 
+        `SELECT s.id as id_squad, s.name_tactic,
+        p.id, p.leader,
         sp.id as id_signup_player , sp.nick, sp.name, sp.ctr, sp.attendance, sp.name_server
-            from squad s 
-            inner join players p on s.id = p.id_squad
-            inner join  signup_players sp on  sp.id = p.id_signup_player order by s.id`
+            FROM squad s
+            INNER JOIN players p ON s.id = p.id_squad
+            INNER JOIN  signup_players sp ON  sp.id = p.id_signup_player order by s.id`
       )
       .then((players) => {
         const squads = players[0]

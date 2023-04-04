@@ -8,7 +8,7 @@ export const usePromises = async ([...querys], sccsMssg, errMssg) => {
     connection = await pool.getConnection()
     await connection.beginTransaction()
 
-    await Promise.all(
+    const resp = await Promise.all(
       querys.map(({ cols, values }) => connection.query(cols, values)) // Debe usarse connection, no pool
     )
     await connection.commit()
@@ -16,7 +16,8 @@ export const usePromises = async ([...querys], sccsMssg, errMssg) => {
     return {
       status: 200,
       success: {
-        mssg: sccsMssg
+        mssg: sccsMssg,
+        body: { squad: [resp[0][0]], user: resp[1][0] }
       }
     }
   } catch (error) {
