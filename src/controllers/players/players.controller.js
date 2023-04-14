@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { pool } from '../../db.js'
 import { io } from '../../index.js'
 import { v4 as uuidv4 } from 'uuid'
@@ -5,26 +6,50 @@ import { encryptPassword } from '../../utils/hashPasswords.js'
 import { jwtCreate } from '../../utils/jsonWebToken.js'
 import { emailJwt } from '../../configEnv.js'
 import { usePromises } from '../../composables/usePromises.js'
+import { useSocketInit } from '../../composables/useSocketInit.js'
 
-// TODO:  PROBBADO Y FUNCIONANDO: HAY QUE APLICARLO
-// TODO: AQUÍ SE EMITE UN EVENTO CUANDO SE CONFIRMA LA ASISTENCIA AL EVENTO
-export const assisConfirmation = async (req, res) => {
-  const result = await pool.query(
-    'insert into confirmed_players values (null, true, "»Nø†¤RiØus", "BM", "3886dfd531d824bcf353fe7fdef9162a", "MASTER");'
+// CONFIRMACIÓN DE ASISTENCIA A CS
+export const assisConfirmation = async ({ body }, res) => {
+  const { nick, ctr, id, name_server } = body
+  const [rows] = await pool.query(
+    'SELECT * FROM confirmed_players WHERE id_signup_player = ?',
+    [id]
   )
 
-  console.log(
-    `Usuario agregado a la base de datos con ID ${result[0].insertId}`
-  )
+  if (Object.keys(rows)?.length) {
+    return res.status(400).json({
+      status: 400,
+      resp: { mssg: 'Ya confirmado!' }
+    })
+  }
+  try {
+    const [{ insertId }] = await pool.query(
+      'INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)', [null, true, nick, ctr, id, name_server]
+    )
+    await pool.query(
+      'UPDATE signup_players SET attendance = ? WHERE id = ?',
+      [true, id])
 
-  console.log(result)
+    const [[player]] = await pool.query(
+      'SELECT * FROM confirmed_players WHERE id = ?',
+      [insertId]
+    )
+    io.emit('assisConfirmation', player)
+    const { allPlayers } = useSocketInit(io)
 
-  const rows = await pool.query(
-    'SELECT * FROM confirmed_players WHERE id = ?',
-    [result[0].insertId]
-  )
-  console.log(rows[0])
-  io.emit('assisConfirmation', rows[0][0])
+    allPlayers()
+
+    res.status(200).json({
+      status: 200,
+      resp: { body: player, mssg: 'Confirmado' }
+    })
+  } catch (error) {
+    console.log(error)
+    res.status(400).json({
+      status: 400,
+      resp: { mssg: 'Error al confirmar' }
+    })
+  }
 }
 
 // REGISTRO DE JUGADORES
@@ -74,7 +99,7 @@ export const player = async ({ body: { id } }, res) => {
       values: [id]
     },
     {
-      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.name_server 
+      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server 
       FROM signup_players sp 
       INNER JOIN sign_in si on sp.id_signin = si.id 
       WHERE si.id = ?`,

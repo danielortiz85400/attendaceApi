@@ -55,7 +55,7 @@ passport.use(
         })
       } catch (error) {
         const { message, ...body } = error
-        done(null, { errorConexion: { body, mssg: 'Sin conexión' } })
+        done(null, { errorConexion: { body, mssg: 'Sin conexión a bd' } })
         console.log(error)
       }
     }
