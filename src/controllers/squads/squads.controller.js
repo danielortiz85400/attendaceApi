@@ -1,6 +1,8 @@
 /* eslint-disable camelcase */
 import { v4 as uuidv4 } from 'uuid'
 import { usePromises } from '../../composables/usePromises.js'
+import { io } from '../../index.js'
+import { useSocketInit } from '../../composables/useSocketInit.js'
 
 // CRATE SQUADS
 export const createSquads = async ({ body }, res) => {
@@ -36,7 +38,12 @@ export const createSquads = async ({ body }, res) => {
   const { status, error, success } = await usePromises(
     querys,
     ' Grupo activo',
-    'Error. Intente de nuevo.'
+    'Error. Intente de nuevo.',
+    () => {
+      const { allSquads, allconfirmPlayers } = useSocketInit(io)
+      allSquads()
+      allconfirmPlayers()
+    }
   )
   const keyName = status === 200 ? 'success' : 'error'
 
@@ -74,7 +81,12 @@ export const deleteSquads = async ({ body }, res) => {
   const { status, error, success } = await usePromises(
     querys,
     ' Grupo eliminado',
-    'Error. Intente de nuevo.'
+    'Error. Intente de nuevo.',
+    () => {
+      const { allSquads, allconfirmPlayers } = useSocketInit(io)
+      allSquads()
+      allconfirmPlayers()
+    }
   )
 
   res.status(status).json({ status, resp: success ?? error })

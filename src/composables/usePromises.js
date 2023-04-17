@@ -1,6 +1,6 @@
 import { pool } from '../db.js'
 
-export const usePromises = async ([...querys], sccsMssg, errMssg) => {
+export const usePromises = async ([...querys], sccsMssg, errMssg, fns) => {
   let connection
   try {
     connection = await pool.getConnection()
@@ -10,6 +10,9 @@ export const usePromises = async ([...querys], sccsMssg, errMssg) => {
       querys.map(({ cols, values }) => connection.query(cols, values)) // Debe usarse connection, no pool
     )
     await connection.commit()
+
+    // eslint-disable-next-line no-unused-expressions
+    fns ? fns() : false
     return {
       status: 200,
       success: {

@@ -8,6 +8,35 @@ import { emailJwt } from '../../configEnv.js'
 import { usePromises } from '../../composables/usePromises.js'
 import { useSocketInit } from '../../composables/useSocketInit.js'
 
+// CANCELACIÓN DE ASISTENCIA A CS
+export const cancelConfirmation = async ({ body }, res) => {
+  const { id } = body
+
+  const querys = [
+    {
+      cols: 'DELETE FROM confirmed_players WHERE id_signup_player = ? ',
+      values: [id]
+    },
+    {
+      cols: 'UPDATE signup_players SET attendance = ? WHERE id = ?',
+      values: [false, id]
+    }
+  ]
+
+  const { status, error, success } = await usePromises(
+    querys,
+    'Asistencia cancelada',
+    'Error. Vuelva a intentar',
+    () => {
+      const { allPlayers, allconfirmPlayers } = useSocketInit(io)
+      allconfirmPlayers()
+      allPlayers()
+    }
+  )
+
+  res.status(status).json({ status, resp: success ?? error })
+}
+
 // CONFIRMACIÓN DE ASISTENCIA A CS
 export const assisConfirmation = async ({ body }, res) => {
   const { nick, ctr, id, name_server } = body
@@ -24,11 +53,13 @@ export const assisConfirmation = async ({ body }, res) => {
   }
   try {
     const [{ insertId }] = await pool.query(
-      'INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)', [null, true, nick, ctr, id, name_server]
+      'INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)',
+      [null, true, nick, ctr, id, name_server]
     )
-    await pool.query(
-      'UPDATE signup_players SET attendance = ? WHERE id = ?',
-      [true, id])
+    await pool.query('UPDATE signup_players SET attendance = ? WHERE id = ?', [
+      true,
+      id
+    ])
 
     const [[player]] = await pool.query(
       'SELECT * FROM confirmed_players WHERE id = ?',
@@ -44,7 +75,6 @@ export const assisConfirmation = async ({ body }, res) => {
       resp: { body: player, mssg: 'Confirmado' }
     })
   } catch (error) {
-    console.log(error)
     res.status(400).json({
       status: 400,
       resp: { mssg: 'Error al confirmar' }
@@ -80,8 +110,12 @@ export const signUpPlayer = async ({ body }, res) => {
 
   const { status, error, success } = await usePromises(
     inserts,
-    'Perfil creado',
-    'Error. Vuelva a intentar'
+    'Perfil Creado',
+    'Error. Vuelva a intentar',
+    () => {
+      const { allPlayers } = useSocketInit(io)
+      allPlayers()
+    }
   )
 
   res.status(status).json({ status, resp: success ?? error })

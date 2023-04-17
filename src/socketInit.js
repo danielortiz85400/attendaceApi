@@ -1,4 +1,3 @@
-// import { pool } from './db.js'
 import { socketAuth } from './middelwares/authSoketIO.js'
 import { useSocketInit } from './composables/useSocketInit.js'
 export const useSocket = (io) => {
