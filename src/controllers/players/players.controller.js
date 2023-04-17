@@ -146,6 +146,6 @@ export const player = async ({ body: { id } }, res) => {
     'Datos de usuario',
     'Error en datos de usuario'
   )
-
+  io.emit('confirmedPlayer', success.body)
   res.status(status).json({ status, resp: success ?? error })
 }
