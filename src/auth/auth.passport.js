@@ -9,6 +9,7 @@ import {
   ExtractJwt as ExtractJWT
 } from 'passport-jwt'
 import { sendEmail } from '../email/signUpConfirmation.js'
+import { usePromises } from '../composables/usePromises.js'
 
 // REGISTRO
 passport.use(
@@ -80,11 +81,34 @@ passport.use(
           !Object.keys(rows)?.length ||
           !comparePassword(password, rows[0].password)
         ) { return done(null, { error: { status: 401, mssg: 'No autenticado' } }) }
+
+        const querys = [
+          {
+            cols: `SELECT signup_players.*, squad.name_tactic, players.leader
+            FROM players
+            INNER JOIN signup_players ON players.id_signup_player = signup_players.id
+            INNER JOIN squad ON squad.id = players.id_squad 
+            WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
+            values: [rows[0].id]
+          },
+          {
+            cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server 
+            FROM signup_players sp 
+            INNER JOIN sign_in si on sp.id_signin = si.id 
+            WHERE si.id = ?`,
+            values: [rows[0].id]
+          }
+        ]
+
+        const { success } = await usePromises(
+          querys
+        )
         const { password: pass, ...user } = rows[0]
         done(null, {
           success: {
             status: 200,
             user,
+            player: success.body,
             jwt: jwtCreate(rows[0].id, jwt.token)
           }
         })

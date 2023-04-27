@@ -1,5 +1,4 @@
 import { pool } from '../db.js'
-
 export const useSocketInit = (socket) => {
   //* TODOS LOS JUGADORES REGISTRADOS
   const allPlayers = () => {
