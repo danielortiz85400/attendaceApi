@@ -4,10 +4,11 @@ import { io } from '../../index.js'
 import { v4 as uuidv4 } from 'uuid'
 import { encryptPassword } from '../../utils/hashPasswords.js'
 import { jwtCreate } from '../../utils/jsonWebToken.js'
-import Jwt from 'jsonwebtoken'
-import { jwt, emailJwt } from '../../configEnv.js'
+// import Jwt from 'jsonwebtoken'
+import { emailJwt } from '../../configEnv.js'
 import { usePromises } from '../../composables/usePromises.js'
 import { useSocketInit } from '../../composables/useSocketInit.js'
+import { emitUserUpdate } from '../../composables/useSocketRoutes.js'
 
 // CANCELACIÓN DE ASISTENCIA A CS
 export const cancelConfirmation = async (req, res) => {
@@ -23,8 +24,8 @@ export const cancelConfirmation = async (req, res) => {
       cols: 'UPDATE signup_players SET attendance = ? WHERE id = ?',
       values: [false, idUser]
     }
-
   ]
+
   const { status, error, success } = await usePromises(
     querys,
     'Asistencia cancelada',
@@ -37,40 +38,46 @@ export const cancelConfirmation = async (req, res) => {
   )
 
   // ACTUALIZACION DE INFORMACIÓN AL CONFIRMAR
-  const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
-  const [rowSignin] = await pool.query(
-    'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
-    [id]
-  )
-  const queryUpdate = [
-    {
-      cols: `SELECT signup_players.*, squad.name_tactic, players.leader
-      FROM players
-      INNER JOIN signup_players ON players.id_signup_player = signup_players.id
-      INNER JOIN squad ON squad.id = players.id_squad 
-      WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
-      values: [rowSignin[0].id]
-    },
-    {
-      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server 
-      FROM signup_players sp 
-      INNER JOIN sign_in si on sp.id_signin = si.id 
-      WHERE si.id = ?`,
-      values: [rowSignin[0].id]
-    }
-  ]
-  const { success: sccs } = await usePromises(
-    queryUpdate
-  )
+  // const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
+  // const [rowSignin] = await pool.query(
+  //   'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
+  //   [id]
+  // )
+  // const queryUpdate = [
+  //   {
+  //     cols: `SELECT signup_players.*, squad.name_tactic, players.leader
+  //     FROM players
+  //     INNER JOIN signup_players ON players.id_signup_player = signup_players.id
+  //     INNER JOIN squad ON squad.id = players.id_squad
+  //     WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
+  //     values: [rowSignin[0].id]
+  //   },
+  //   {
+  //     cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server
+  //     FROM signup_players sp
+  //     INNER JOIN sign_in si on sp.id_signin = si.id
+  //     WHERE si.id = ?`,
+  //     values: [rowSignin[0].id]
+  //   }
+  // ]
+  // const { success: sccs } = await usePromises(queryUpdate)
+  // res.status(status).json({ status, resp: success ?? error })
+
+  // io.emit('userInit', {
+  //   success: {
+  //     user: rowSignin[0],
+  //     player: sccs.body,
+  //     jwt: jwtCreate(id, jwt.token)
+  //   }
+  // })
   res.status(status).json({ status, resp: success ?? error })
 
-  io.emit('userInit', {
-    success: {
-      user: rowSignin[0],
-      player: sccs.body,
-      jwt: jwtCreate(id, jwt.token)
+  await emitUserUpdate(jwtCookie, [
+    {
+      name: 'userInit',
+      data: [] // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
     }
-  })
+  ])
 }
 
 // CONFIRMACIÓN DE ASISTENCIA A CS
@@ -103,58 +110,77 @@ export const assisConfirmation = async (req, res) => {
       'SELECT * FROM confirmed_players WHERE id = ?',
       [insertId]
     )
+    const { resp } = await emitUserUpdate(
+      jwtCookie,
+      [
+        {
+          name: 'assisConfirmation',
+          data: player
+        },
+        {
+          name: 'userInit',
+          data: [] // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
+        }
+      ],
+      () => {
+        const { allPlayers } = useSocketInit(io)
+        allPlayers()
+      }
+    )
 
     // ACTUALIZACION DE INFORMACIÓN AL CONFIRMAR
-    const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
-    const [rowSignin] = await pool.query(
-      'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
-      [id]
-    )
-    const querys = [
-      {
-        cols: `SELECT signup_players.*, squad.name_tactic, players.leader
-        FROM players
-        INNER JOIN signup_players ON players.id_signup_player = signup_players.id
-        INNER JOIN squad ON squad.id = players.id_squad 
-        WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
-        values: [rowSignin[0].id]
-      },
-      {
-        cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server 
-        FROM signup_players sp 
-        INNER JOIN sign_in si on sp.id_signin = si.id 
-        WHERE si.id = ?`,
-        values: [rowSignin[0].id]
-      }
-    ]
+    // const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
+    // const [rowSignin] = await pool.query(
+    //   'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
+    //   [id]
+    // )
+    // const querys = [
+    //   {
+    //     cols: `SELECT signup_players.*, squad.name_tactic, players.leader
+    //     FROM players
+    //     INNER JOIN signup_players ON players.id_signup_player = signup_players.id
+    //     INNER JOIN squad ON squad.id = players.id_squad
+    //     WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
+    //     values: [rowSignin[0].id]
+    //   },
+    //   {
+    //     cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server
+    //     FROM signup_players sp
+    //     INNER JOIN sign_in si on sp.id_signin = si.id
+    //     WHERE si.id = ?`,
+    //     values: [rowSignin[0].id]
+    //   }
+    // ]
 
-    const { success } = await usePromises(
-      querys
-    )
-    io.emit('assisConfirmation', player)
-    io.emit('userInit', {
-      success: {
-        user: rowSignin[0],
-        player: success.body,
-        jwt: jwtCreate(id, jwt.token)
-      }
-    })
-
-    const { allPlayers } = useSocketInit(io)
-
-    allPlayers()
+    // const { success } = await usePromises(
+    //   querys
+    // )
+    // io.emit('assisConfirmation', player)
+    // io.emit('userInit', {
+    //   success: {
+    //     user: rowSignin[0],
+    //     player: success.body,
+    //     jwt: jwtCreate(id, jwt.token)
+    //   }
+    // })
 
     res.status(200).json({
       status: 200,
       resp: { body: player, mssg: 'Confirmado' },
-      usuario: {
-        success: {
-          user: rowSignin[0],
-          player: success.body,
-          jwt: jwtCreate(id, jwt.token)
-        }
-      }
+      usuario: resp
     })
+
+    // res.status(200).json({
+    //   status: 200,
+    //   resp: { body: player, mssg: 'Confirmado' },
+    //   usuario: {
+    //     success: {
+    //       user: rowSignin[0],
+    //       player: success.body,
+    //       jwt: jwtCreate(id, jwt.token)
+    //     }
+    //   }
+    // })
   } catch (error) {
     console.log(error)
 
