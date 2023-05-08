@@ -23,7 +23,7 @@ export const emitUserUpdate = async (jwtCookie, emitsRoutes = [], emitsAll) => {
       values: [row[0].id]
     },
     {
-      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server 
+      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server, sp.create_at, sp.update_on
     FROM signup_players sp 
     INNER JOIN sign_in si on sp.id_signin = si.id 
     WHERE si.id = ?`,

@@ -4,25 +4,55 @@ import { io } from '../../index.js'
 import { v4 as uuidv4 } from 'uuid'
 import { encryptPassword } from '../../utils/hashPasswords.js'
 import { jwtCreate } from '../../utils/jsonWebToken.js'
-// import Jwt from 'jsonwebtoken'
 import { emailJwt } from '../../configEnv.js'
 import { usePromises } from '../../composables/usePromises.js'
 import { useSocketInit } from '../../composables/useSocketInit.js'
 import { emitUserUpdate } from '../../composables/useSocketRoutes.js'
 
 // CANCELACIÓN DE ASISTENCIA A CS
+/** Necesita obligatoriamente req.cookie */
 export const cancelConfirmation = async (req, res) => {
   const jwtCookie = req.cookies?.refreshToken
-  const { id: idUser } = req.body
+  const { id, update_on } = req.body
+  const [isInSquad] = await pool.query(
+    'SELECT * FROM players WHERE id_signup_player = ?',
+    [id]
+  )
+  if (Object.keys(isInSquad)?.length) {
+    return res.status(400).json({
+      status: 400,
+      resp: {
+        mssg: 'Está en grupo!'
+      }
+    })
+  }
 
+  const currDate = new Date().getTime()
+  const dateToCompare = new Date(update_on).getTime()
+  const missingMs = 24 * 60 * 60 * 1000 - (currDate - dateToCompare)
+  console.log(missingMs)
+
+  if (missingMs > 0) {
+    const missingHours = Math.floor(missingMs / (1000 * 60 * 60))
+    const missingMinutes = Math.floor(
+      (missingMs % (1000 * 60 * 60)) / (1000 * 60)
+    )
+
+    return res.status(422).json({
+      status: 422,
+      resp: {
+        mssg: `Tiempo: ${missingHours} h y ${missingMinutes} min para cancelar.`
+      }
+    })
+  }
   const querys = [
     {
       cols: 'DELETE FROM confirmed_players WHERE id_signup_player = ? ',
-      values: [idUser]
+      values: [id]
     },
     {
       cols: 'UPDATE signup_players SET attendance = ? WHERE id = ?',
-      values: [false, idUser]
+      values: [false, id]
     }
   ]
 
@@ -37,39 +67,6 @@ export const cancelConfirmation = async (req, res) => {
     }
   )
 
-  // ACTUALIZACION DE INFORMACIÓN AL CONFIRMAR
-  // const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
-  // const [rowSignin] = await pool.query(
-  //   'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
-  //   [id]
-  // )
-  // const queryUpdate = [
-  //   {
-  //     cols: `SELECT signup_players.*, squad.name_tactic, players.leader
-  //     FROM players
-  //     INNER JOIN signup_players ON players.id_signup_player = signup_players.id
-  //     INNER JOIN squad ON squad.id = players.id_squad
-  //     WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
-  //     values: [rowSignin[0].id]
-  //   },
-  //   {
-  //     cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server
-  //     FROM signup_players sp
-  //     INNER JOIN sign_in si on sp.id_signin = si.id
-  //     WHERE si.id = ?`,
-  //     values: [rowSignin[0].id]
-  //   }
-  // ]
-  // const { success: sccs } = await usePromises(queryUpdate)
-  // res.status(status).json({ status, resp: success ?? error })
-
-  // io.emit('userInit', {
-  //   success: {
-  //     user: rowSignin[0],
-  //     player: sccs.body,
-  //     jwt: jwtCreate(id, jwt.token)
-  //   }
-  // })
   res.status(status).json({ status, resp: success ?? error })
 
   await emitUserUpdate(jwtCookie, [
@@ -81,29 +78,45 @@ export const cancelConfirmation = async (req, res) => {
 }
 
 // CONFIRMACIÓN DE ASISTENCIA A CS
+/** Necesita obligatoriamente req.cookie */
 export const assisConfirmation = async (req, res) => {
-  const { nick, ctr, id: idUser, name_server } = req.body
+  const { nick, ctr, id, name_server } = req.body
 
   try {
     const jwtCookie = req.cookies?.refreshToken
-    const [rows] = await pool.query(
+
+    const [isConfirmed] = await pool.query(
       'SELECT * FROM confirmed_players WHERE id_signup_player = ?',
-      [idUser]
+      [id]
     )
 
-    if (Object.keys(rows)?.length) {
+    if (Object.keys(isConfirmed)?.length) {
       return res.status(400).json({
         status: 400,
-        resp: { mssg: 'Ya confirmado!' }
+        resp: {
+          mssg: 'Ya ha confirmado!'
+        }
+      })
+    }
+    const [isInSquad] = await pool.query(
+      'SELECT * FROM players WHERE id_signup_player = ?',
+      [id]
+    )
+    if (Object.keys(isInSquad)?.length) {
+      return res.status(400).json({
+        status: 400,
+        resp: {
+          mssg: 'Está en grupo!'
+        }
       })
     }
     const [{ insertId }] = await pool.query(
       'INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)',
-      [null, true, nick, ctr, idUser, name_server]
+      [null, true, nick, ctr, id, name_server]
     )
     await pool.query('UPDATE signup_players SET attendance = ? WHERE id = ?', [
       true,
-      idUser
+      id
     ])
 
     const [[player]] = await pool.query(
@@ -128,59 +141,11 @@ export const assisConfirmation = async (req, res) => {
       }
     )
 
-    // ACTUALIZACION DE INFORMACIÓN AL CONFIRMAR
-    // const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
-    // const [rowSignin] = await pool.query(
-    //   'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
-    //   [id]
-    // )
-    // const querys = [
-    //   {
-    //     cols: `SELECT signup_players.*, squad.name_tactic, players.leader
-    //     FROM players
-    //     INNER JOIN signup_players ON players.id_signup_player = signup_players.id
-    //     INNER JOIN squad ON squad.id = players.id_squad
-    //     WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
-    //     values: [rowSignin[0].id]
-    //   },
-    //   {
-    //     cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server
-    //     FROM signup_players sp
-    //     INNER JOIN sign_in si on sp.id_signin = si.id
-    //     WHERE si.id = ?`,
-    //     values: [rowSignin[0].id]
-    //   }
-    // ]
-
-    // const { success } = await usePromises(
-    //   querys
-    // )
-    // io.emit('assisConfirmation', player)
-    // io.emit('userInit', {
-    //   success: {
-    //     user: rowSignin[0],
-    //     player: success.body,
-    //     jwt: jwtCreate(id, jwt.token)
-    //   }
-    // })
-
     res.status(200).json({
       status: 200,
       resp: { body: player, mssg: 'Confirmado' },
       usuario: resp
     })
-
-    // res.status(200).json({
-    //   status: 200,
-    //   resp: { body: player, mssg: 'Confirmado' },
-    //   usuario: {
-    //     success: {
-    //       user: rowSignin[0],
-    //       player: success.body,
-    //       jwt: jwtCreate(id, jwt.token)
-    //     }
-    //   }
-    // })
   } catch (error) {
     console.log(error)
 

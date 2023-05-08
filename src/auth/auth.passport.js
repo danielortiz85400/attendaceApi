@@ -10,7 +10,6 @@ import {
   ExtractJwt as ExtractJWT
 } from 'passport-jwt'
 import { sendEmail } from '../email/signUpConfirmation.js'
-// import { usePromises } from '../composables/usePromises.js'
 import { emitUserUpdate } from '../composables/useSocketRoutes.js'
 
 // REGISTRO
@@ -47,7 +46,15 @@ passport.use(
 
         await pool.query(
           'INSERT INTO sign_in (id,email,password, user_role, role_permissions,status, token) VALUES(?,?,?,?,?,?,?)',
-          [null, email, encryptPassword(password), role, permissions, false, token]
+          [
+            null,
+            email,
+            encryptPassword(password),
+            role,
+            permissions,
+            false,
+            token
+          ]
         )
 
         done(null, {
@@ -82,44 +89,14 @@ passport.use(
         if (
           !Object.keys(rows)?.length ||
           !comparePassword(password, rows[0].password)
-        ) { return done(null, { error: { status: 401, mssg: 'No autenticado' } }) }
+        ) {
+          return done(null, { error: { status: 401, mssg: 'No autenticado' } })
+        }
 
-        // const querys = [
-        //   {
-        //     cols: `SELECT signup_players.*, squad.name_tactic, players.leader
-        //     FROM players
-        //     INNER JOIN signup_players ON players.id_signup_player = signup_players.id
-        //     INNER JOIN squad ON squad.id = players.id_squad
-        //     WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
-        //     values: [rows[0].id]
-        //   },
-        //   {
-        //     cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server
-        //     FROM signup_players sp
-        //     INNER JOIN sign_in si on sp.id_signin = si.id
-        //     WHERE si.id = ?`,
-        //     values: [rows[0].id]
-        //   }
-        // ]
-
-        // const { success } = await usePromises(
-        //   querys
-        // )
         const token = Jwt.sign({ id: rows[0].id }, jwt.jwtRefresh)
-
         const { resp } = await emitUserUpdate(token)
-        // const { password: pass, ...user } = rows[0]
 
         done(null, resp)
-
-        // done(null, {
-        //   success: {
-        //     status: 200,
-        //     user,
-        //     player: success.body,
-        //     jwt: jwtCreate(rows[0].id, jwt.token)
-        //   }
-        // })
       } catch (error) {
         console.log(error)
         const { message, ...body } = error
