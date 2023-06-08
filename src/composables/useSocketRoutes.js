@@ -6,7 +6,7 @@ import { io } from '../index.js'
 import { jwtCreate } from '../utils/jsonWebToken.js'
 
 // ACTUALIZACION DE INFORMACIÓN AL CONFIRMAR
-export const emitUserUpdate = async (jwtCookie, emitsRoutes = [], emitsAll) => {
+export const emitUpdateUser = async (jwtCookie, emitsRoutes = [], emitsAll) => {
   const { id } = Jwt.verify(jwtCookie, jwt.jwtRefresh)
   const [row] = await pool.query(
     'SELECT id, email, user_role, role_permissions,status FROM sign_in WHERE id = ?',
@@ -41,11 +41,15 @@ export const emitUserUpdate = async (jwtCookie, emitsRoutes = [], emitsAll) => {
   }
 
   if (Object.entries(emitsRoutes)?.length) {
-    emitsRoutes.map((cols) => {
-      if (!Object.entries(cols.data)?.length) {
-        cols.data = resp
+    const cols = emitsRoutes.map((col) => {
+      if (!Object.entries(col.data)?.length) {
+        col.data = resp
       }
-      return io.emit(cols.name, cols.data)
+      return col
+    })
+
+    cols.forEach((col) => {
+      io.emit(col.name, col.data)
     })
   }
 

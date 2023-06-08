@@ -10,7 +10,7 @@ import {
   ExtractJwt as ExtractJWT
 } from 'passport-jwt'
 import { sendEmail } from '../email/signUpConfirmation.js'
-import { emitUserUpdate } from '../composables/useSocketRoutes.js'
+import { emitUpdateUser } from '../composables/useSocketRoutes.js'
 
 // REGISTRO
 passport.use(
@@ -94,7 +94,7 @@ passport.use(
         }
 
         const token = Jwt.sign({ id: rows[0].id }, jwt.jwtRefresh)
-        const { resp } = await emitUserUpdate(token)
+        const { resp } = await emitUpdateUser(token)
 
         done(null, resp)
       } catch (error) {

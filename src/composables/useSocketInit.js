@@ -41,5 +41,11 @@ export const useSocketInit = (socket) => {
         socket.emit('allSquads', squads)
       })
   }
-  return { allPlayers, allconfirmPlayers, allSquads }
+  //* TODOS LAS NOTIFICACIONES
+  const allNotifications = () => {
+    pool.query('SELECT * FROM attendance_notifications an INNER JOIN confirmed_players cp ON an.id_signup_player = cp.id_signup_player').then(([rows]) => {
+      socket.emit('allNotifications', rows)
+    })
+  }
+  return { allPlayers, allconfirmPlayers, allSquads, allNotifications }
 }

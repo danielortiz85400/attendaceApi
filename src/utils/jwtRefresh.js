@@ -1,4 +1,4 @@
-import { emitUserUpdate } from '../composables/useSocketRoutes.js'
+import { emitUpdateUser } from '../composables/useSocketRoutes.js'
 
 export const refreshJwt = async (req, res) => {
   try {
@@ -12,7 +12,7 @@ export const refreshJwt = async (req, res) => {
       })
     }
 
-    const { resp } = await emitUserUpdate(jwtCookie)
+    const { resp } = await emitUpdateUser(jwtCookie)
     res.status(200).json(resp)
   } catch (error) {
     res.status(400).json({

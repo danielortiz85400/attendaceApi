@@ -7,13 +7,13 @@ import { jwtCreate } from '../../utils/jsonWebToken.js'
 import { emailJwt } from '../../configEnv.js'
 import { usePromises } from '../../composables/usePromises.js'
 import { useSocketInit } from '../../composables/useSocketInit.js'
-import { emitUserUpdate } from '../../composables/useSocketRoutes.js'
+import { emitUpdateUser } from '../../composables/useSocketRoutes.js'
 
 // CANCELACIÓN DE ASISTENCIA A CS
 /** Necesita obligatoriamente req.cookie */
 export const cancelConfirmation = async (req, res) => {
   const jwtCookie = req.cookies?.refreshToken
-  const { id, update_on } = req.body
+  const { id } = req.body // update_on
   const [isInSquad] = await pool.query(
     'SELECT * FROM players WHERE id_signup_player = ?',
     [id]
@@ -27,25 +27,28 @@ export const cancelConfirmation = async (req, res) => {
     })
   }
 
-  const currDate = new Date().getTime()
-  const dateToCompare = new Date(update_on).getTime()
-  const missingMs = 24 * 60 * 60 * 1000 - (currDate - dateToCompare)
-  console.log(missingMs)
+  // const currDate = new Date().getTime()
+  // const dateToCompare = new Date(update_on).getTime()
+  // const missingMs = 24 * 60 * 60 * 1000 - (currDate - dateToCompare)
 
-  if (missingMs > 0) {
-    const missingHours = Math.floor(missingMs / (1000 * 60 * 60))
-    const missingMinutes = Math.floor(
-      (missingMs % (1000 * 60 * 60)) / (1000 * 60)
-    )
+  // if (missingMs > 0) {
+  //   const missingHours = Math.floor(missingMs / (1000 * 60 * 60))
+  //   const missingMinutes = Math.floor(
+  //     (missingMs % (1000 * 60 * 60)) / (1000 * 60)
+  //   )
 
-    return res.status(422).json({
-      status: 422,
-      resp: {
-        mssg: `Tiempo: ${missingHours} h y ${missingMinutes} min para cancelar.`
-      }
-    })
-  }
+  //   return res.status(422).json({
+  //     status: 422,
+  //     resp: {
+  //       mssg: `Tiempo: ${missingHours} h y ${missingMinutes} min para cancelar.`
+  //     }
+  //   })
+  // }
   const querys = [
+    {
+      cols: 'DELETE FROM attendance_notifications WHERE id_signup_player  = ?',
+      values: [id]
+    },
     {
       cols: 'DELETE FROM confirmed_players WHERE id_signup_player = ? ',
       values: [id]
@@ -61,15 +64,16 @@ export const cancelConfirmation = async (req, res) => {
     'Asistencia cancelada',
     'Error. Vuelva a intentar',
     () => {
-      const { allPlayers, allconfirmPlayers } = useSocketInit(io)
+      const { allPlayers, allconfirmPlayers, allNotifications } = useSocketInit(io)
       allconfirmPlayers()
       allPlayers()
+      allNotifications()
     }
   )
 
   res.status(status).json({ status, resp: success ?? error })
 
-  await emitUserUpdate(jwtCookie, [
+  await emitUpdateUser(jwtCookie, [
     {
       name: 'userInit',
       data: [] // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
@@ -114,6 +118,18 @@ export const assisConfirmation = async (req, res) => {
       'INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)',
       [null, true, nick, ctr, id, name_server]
     )
+    // Notificación al confirmar asistencia.
+    await pool.query(
+      'INSERT INTO attendance_notifications (id, id_signup_player) VALUES (?,?) ',
+      [null, id]
+    )
+    const [attNotify] = await pool.query(
+      // eslint-disable-next-line quotes
+      `SELECT * FROM attendance_notifications attn INNER JOIN confirmed_players cp ON attn.id_signup_player = cp.id_signup_player WHERE cp.id = ?`,
+      [insertId]
+    )
+
+    // Actualizar campo attendance del jugador que confirma
     await pool.query('UPDATE signup_players SET attendance = ? WHERE id = ?', [
       true,
       id
@@ -123,12 +139,16 @@ export const assisConfirmation = async (req, res) => {
       'SELECT * FROM confirmed_players WHERE id = ?',
       [insertId]
     )
-    const { resp } = await emitUserUpdate(
+    const { resp } = await emitUpdateUser(
       jwtCookie,
       [
         {
           name: 'assisConfirmation',
           data: player
+        },
+        {
+          name: 'attNotify',
+          data: attNotify[0]
         },
         {
           name: 'userInit',
@@ -140,7 +160,6 @@ export const assisConfirmation = async (req, res) => {
         allPlayers()
       }
     )
-
     res.status(200).json({
       status: 200,
       resp: { body: player, mssg: 'Confirmado' },
