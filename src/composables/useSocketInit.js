@@ -1,17 +1,17 @@
-import { pool } from '../db.js'
+import { pool } from "../db.js";
 export const useSocketInit = (socket) => {
   //* TODOS LOS JUGADORES REGISTRADOS
   const allPlayers = () => {
-    pool.query('SELECT * FROM signup_players').then(([rows]) => {
-      socket.emit('allSignupPlayers', rows)
-    })
-  }
+    pool.query("SELECT * FROM signup_players").then(([rows]) => {
+      socket.emit("allSignupPlayers", rows);
+    });
+  };
   //* TODOS LOS JUGADORES CONFIRMADOS AL EVENTO
   const allconfirmPlayers = () => {
-    pool.query('SELECT * FROM confirmed_players').then(([rows]) => {
-      socket.emit('allconfirmPlayers', rows)
-    })
-  }
+    pool.query("SELECT * FROM confirmed_players").then(([rows]) => {
+      socket.emit("allconfirmPlayers", rows);
+    });
+  };
   //* TODOS LOS SQUADS CREADOS
   const allSquads = () => {
     pool
@@ -29,23 +29,27 @@ export const useSocketInit = (socket) => {
             (acc, curr, i) => (
               (acc[Math.floor(i / 5)] = [
                 ...(acc[Math.floor(i / 5)] || []),
-                curr
+                curr,
                 // eslint-disable-next-line no-sequences
               ]),
               acc
             ),
             []
           )
-          .map((squads) => squads.sort((a, b) => b.leader - a.leader || 0))
+          .map((squads) => squads.sort((a, b) => b.leader - a.leader || 0));
 
-        socket.emit('allSquads', squads)
-      })
-  }
+        socket.emit("allSquads", squads);
+      });
+  };
   //* TODOS LAS NOTIFICACIONES
   const allNotifications = () => {
-    pool.query('SELECT * FROM attendance_notifications an INNER JOIN confirmed_players cp ON an.id_signup_player = cp.id_signup_player').then(([rows]) => {
-      socket.emit('allNotifications', rows)
-    })
-  }
-  return { allPlayers, allconfirmPlayers, allSquads, allNotifications }
-}
+    pool
+      .query(
+        "SELECT * FROM attendance_notifications an INNER JOIN confirmed_players cp ON an.id_signup_player = cp.id_signup_player WHERE an.active = true"
+      )
+      .then(([rows]) => {
+        socket.emit("allNotifications", rows);
+      });
+  };
+  return { allPlayers, allconfirmPlayers, allSquads, allNotifications };
+};
