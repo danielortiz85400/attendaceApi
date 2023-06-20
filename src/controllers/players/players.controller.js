@@ -8,12 +8,16 @@ import { emailJwt } from "../../configEnv.js";
 import { usePromises } from "../../composables/usePromises.js";
 import { useSocketInit } from "../../composables/useSocketInit.js";
 import { emitUpdateUser } from "../../composables/useSocketRoutes.js";
+import {
+  vlteConfirmation,
+  vlteCancel,
+} from "../../services/ValidationPlayers.js";
 
 // CANCELACIÓN DE ASISTENCIA A CS
 /** Necesita obligatoriamente req.cookie */
 export const cancelConfirmation = async (req, res) => {
   const jwtCookie = req.cookies?.refreshToken;
-  const { id } = req.body; // update_on
+  const { id, update_on } = req.body; //
   const [isInSquad] = await pool.query(
     "SELECT * FROM players WHERE id_signup_player = ?",
     [id]
@@ -26,24 +30,8 @@ export const cancelConfirmation = async (req, res) => {
       },
     });
   }
+  vlteCancel(res, update_on);
 
-  // const currDate = new Date().getTime()
-  // const dateToCompare = new Date(update_on).getTime()
-  // const missingMs = 24 * 60 * 60 * 1000 - (currDate - dateToCompare)
-
-  // if (missingMs > 0) {
-  //   const missingHours = Math.floor(missingMs / (1000 * 60 * 60))
-  //   const missingMinutes = Math.floor(
-  //     (missingMs % (1000 * 60 * 60)) / (1000 * 60)
-  //   )
-
-  //   return res.status(422).json({
-  //     status: 422,
-  //     resp: {
-  //       mssg: `Tiempo: ${missingHours} h y ${missingMinutes} min para cancelar.`
-  //     }
-  //   })
-  // }
   const querys = [
     {
       cols: "DELETE FROM attendance_notifications WHERE id_signup_player  = ?",
@@ -90,82 +78,120 @@ export const assisConfirmation = async (req, res) => {
   try {
     const jwtCookie = req.cookies?.refreshToken;
 
-    const [isConfirmed] = await pool.query(
-      "SELECT * FROM confirmed_players WHERE id_signup_player = ?",
-      [id]
-    );
-
-    if (Object.keys(isConfirmed)?.length) {
-      return res.status(400).json({
-        status: 400,
-        resp: {
-          mssg: "Ya ha confirmado!",
+    const querysVlteConfirmation = [
+      {
+        cols: "SELECT * FROM confirmed_players WHERE id_signup_player = ?",
+        values: [id],
+      },
+      {
+        cols: "SELECT * FROM players WHERE id_signup_player = ?",
+        values: [id],
+      },
+    ];
+    // Validate confirmation
+    const isvVlte = await vlteConfirmation(querysVlteConfirmation);
+    if (isvVlte.errorType === -1) {
+      const [{ insertId }] = await pool.query(
+        "INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)",
+        [null, true, nick, ctr, id, name_server]
+      );
+      const confirmUpdateQuerys = [
+        {
+          cols: "INSERT INTO attendance_notifications (id, id_signup_player, active) VALUES (?,?,?) ",
+          values: [null, id, true],
         },
+        {
+          cols: "UPDATE signup_players SET attendance = ? WHERE id = ?",
+          values: [true, id],
+        },
+      ];
+      await usePromises(confirmUpdateQuerys);
+      // Notificación al confirmar asistencia.
+      // await pool.query(
+      //   "INSERT INTO attendance_notifications (id, id_signup_player, active) VALUES (?,?, ?) ",
+      //   [null, id, true]
+      // );
+      // // Actualizar campo attendance del jugador que confirma
+      // await pool.query(
+      //   "UPDATE signup_players SET attendance = ? WHERE id = ?",
+      //   [true, id]
+      // );
+
+      const [attNotify] = await pool.query(
+        // eslint-disable-next-line quotes
+        `SELECT * FROM attendance_notifications attn INNER JOIN confirmed_players cp ON attn.id_signup_player = cp.id_signup_player WHERE cp.id = ?`,
+        [insertId]
+      );
+
+      // // Actualizar campo attendance del jugador que confirma
+      // await pool.query(
+      //   "UPDATE signup_players SET attendance = ? WHERE id = ?",
+      //   [true, id]
+      // );
+
+      const [[player]] = await pool.query(
+        "SELECT * FROM confirmed_players WHERE id = ?",
+        [insertId]
+      );
+
+      const { resp } = await emitUpdateUser(
+        jwtCookie,
+        [
+          {
+            name: "assisConfirmation",
+            data: player,
+          },
+          {
+            name: "attNotify",
+            data: attNotify[0],
+          },
+          {
+            name: "userInit",
+            data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
+          },
+        ],
+        () => {
+          const { allPlayers } = useSocketInit(io);
+          allPlayers();
+        }
+      );
+      return res.status(200).json({
+        status: 200,
+        resp: { body: player, mssg: "Confirmado" },
+        usuario: resp,
       });
     }
-    const [isInSquad] = await pool.query(
-      "SELECT * FROM players WHERE id_signup_player = ?",
-      [id]
-    );
-    if (Object.keys(isInSquad)?.length) {
-      return res.status(400).json({
-        status: 400,
-        resp: {
-          mssg: "Está en grupo!",
-        },
-      });
-    }
-    const [{ insertId }] = await pool.query(
-      "INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)",
-      [null, true, nick, ctr, id, name_server]
-    );
-    // Notificación al confirmar asistencia.
-    await pool.query(
-      "INSERT INTO attendance_notifications (id, id_signup_player, active) VALUES (?,?, ?) ",
-      [null, id, true]
-    );
-    const [attNotify] = await pool.query(
-      // eslint-disable-next-line quotes
-      `SELECT * FROM attendance_notifications attn INNER JOIN confirmed_players cp ON attn.id_signup_player = cp.id_signup_player WHERE cp.id = ?`,
-      [insertId]
-    );
+    res.status(400).json(isvVlte.errorType);
 
-    // Actualizar campo attendance del jugador que confirma
-    await pool.query("UPDATE signup_players SET attendance = ? WHERE id = ?", [
-      true,
-      id,
-    ]);
+    // const respTest = await Promise.all(
+    //   querysTest.map(({ cols, values }) => pool.query(cols, values)) // Debe usarse connection, no pool
+    // );
+    // console.log(JSON.stringify(respTest));
+    // const [isConfirmed] = await pool.query(
+    //   "SELECT * FROM confirmed_players WHERE id_signup_player = ?",
+    //   [id]
+    // );
 
-    const [[player]] = await pool.query(
-      "SELECT * FROM confirmed_players WHERE id = ?",
-      [insertId]
-    );
-    const { resp } = await emitUpdateUser(
-      jwtCookie,
-      [
-        {
-          name: "assisConfirmation",
-          data: player,
-        },
-        {
-          name: "attNotify",
-          data: attNotify[0],
-        },
-        {
-          name: "userInit",
-          data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
-        },
-      ],
-      () => {
-        const { allPlayers } = useSocketInit(io);
-        allPlayers();
-      }
-    );
-    res.status(200).json({
-      status: 200,
-      resp: { body: player, mssg: "Confirmado" },
-      usuario: resp,
-    });
+    // if (Object.keys(isConfirmed)?.length) {
+    //   return res.status(400).json({
+    //     status: 400,
+    //     resp: {
+    //       mssg: "Ya ha confirmado!",
+    //     },
+    //   });
+    // }
+    // const [isInSquad] = await pool.query(
+    //   "SELECT * FROM players WHERE id_signup_player = ?",
+    //   [id]
+    // );
+    // if (Object.keys(isInSquad)?.length) {
+    //   return res.status(400).json({
+    //     status: 400,
+    //     resp: {
+    //       mssg: "Está en grupo!",
+    //     },
+    //   });
+    // }
   } catch (error) {
     console.log(error);
 

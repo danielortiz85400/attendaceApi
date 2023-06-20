@@ -32,8 +32,5 @@
     "@types/bcrypt": "^5.0.0",
     "nodemon": "^2.0.20",
     "standard": "^17.0.0"
-  },
-  "eslintConfig": {
-    "extends": "./node_modules/standard/eslintrc.json"
   }
 }
