@@ -2,13 +2,12 @@ import { queryBatchExe } from "../composables/queryBatchExe.js";
 /**
  * Servicio para validar la confirmación de usuarios.
  * @param {Express.Response} res -Objeto para responder
- * @param {Array.<Object>} querys matriz que contiene ua consulta: cols<string>:query, values<[]>:valores
- * @returns {object} - errorType
+ * @param {Array.<Object>} querys Matriz que contiene ua consulta:  { cols: string, values: [] }
+ * @returns {object} - Express.Response | deny
  */
 export const vlteConfirmation = async (res, [...querys]) => {
   try {
-    
-    const {success} =  await queryBatchExe(querys)
+    const { success } = await queryBatchExe(querys);
     const errorIndex = Object.values(success.fullbody)
       .map(([[resp]]) => resp)
       .findIndex((i) => i !== undefined);
@@ -31,9 +30,15 @@ export const vlteConfirmation = async (res, [...querys]) => {
       },
     };
 
-    return res.status(400).json(deny);
+    res.status(400).json(deny);
   } catch (error) {
     console.log(error);
+    res.status(400).json({
+      status: 400,
+      error: {
+        resp: { mssg: "Error al confirmar" },
+      },
+    });
   }
 };
 

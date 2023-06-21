@@ -30,8 +30,8 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
       },
     });
   }
-   const {granted} =  vlteCancelTime(res, update_on);
-   if(granted){
+   const authorized =  vlteCancelTime(res, update_on);
+   if(authorized?.granted){
     const querys = [
       {
         cols: "DELETE FROM attendance_notifications WHERE id_signup_player  = ?",
@@ -92,8 +92,8 @@ export const assisConfirmation = async ({body, cookies}, res) => {
       },
     ];
     // Validate confirmation
-    const { granted } = await vlteConfirmation(res ,querysVlteConfirmation);
-    if (granted) {
+    const authorized = await vlteConfirmation(res ,querysVlteConfirmation);
+    if (authorized?.granted) {
       const [{ insertId }] = await pool.query(
         "INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)",
         [null, true, nick, ctr, id, name_server]
