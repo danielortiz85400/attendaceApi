@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon  src/index.js"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +19,7 @@
     "express-joi-validation": "^5.0.1",
     "joi": "^17.7.0",
     "jsonwebtoken": "^9.0.0",
+    "module-alias": "^2.2.3",
     "mysql2": "^2.3.3",
     "nodemailer": "^6.8.0",
     "passport": "^0.6.0",
@@ -30,6 +31,8 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
+    "@types/module-alias": "^2.0.1",
+    "esm": "^3.2.25",
     "nodemon": "^2.0.20",
     "standard": "^17.0.0"
   }

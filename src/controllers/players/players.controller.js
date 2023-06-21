@@ -1,8 +1,8 @@
 /* eslint-disable camelcase */
-import { pool } from "../../db.js";
+import { pool } from "../../db.js" 
 import { io } from "../../index.js";
 import { v4 as uuidv4 } from "uuid";
-import { encryptPassword } from "../../utils/hashPasswords.js";
+import { encryptPassword } from  "../../utils/hashPasswords.js"
 import { jwtCreate } from "../../utils/jsonWebToken.js";
 import { emailJwt } from "../../configEnv.js";
 import { usePromises } from "../../composables/usePromises.js";
