@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { encryptPassword } from  "../../utils/hashPasswords.js"
 import { jwtCreate } from "../../utils/jsonWebToken.js";
 import { emailJwt } from "../../configEnv.js";
-import { usePromises } from "../../composables/usePromises.js";
+import { queryBatchExe } from "../../composables/queryBatchExe.js";
 import { useSocketInit } from "../../composables/useSocketInit.js";
 import { emitUpdateUser } from "../../composables/useSocketRoutes.js";
 import {
@@ -47,7 +47,7 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
       },
     ];
   
-    const { status, error, success } = await usePromises(
+    const { status, error, success } = await queryBatchExe(
       querys,
       "Asistencia cancelada",
       "Error. Vuelva a intentar",
@@ -65,7 +65,7 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
     await emitUpdateUser(jwtCookie, [
       {
         name: "userInit",
-        data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
+        data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna queryBatchExe()
       },
     ]);
   }
@@ -108,7 +108,7 @@ export const assisConfirmation = async ({body, cookies}, res) => {
           values: [true, id],
         },
       ];
-      await usePromises(confirmUpdateQuerys);
+      await queryBatchExe(confirmUpdateQuerys);
       // Notificación al confirmar asistencia.
       // await pool.query(
       //   "INSERT INTO attendance_notifications (id, id_signup_player, active) VALUES (?,?, ?) ",
@@ -150,7 +150,7 @@ export const assisConfirmation = async ({body, cookies}, res) => {
           },
           {
             name: "userInit",
-            data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna usePromises()
+            data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna queryBatchExe()
           },
         ],
         () => {
@@ -201,7 +201,7 @@ export const signUpPlayer = async ({ body }, res) => {
     },
   ];
 
-  const { status, error, success } = await usePromises(
+  const { status, error, success } = await queryBatchExe(
     inserts,
     "Perfil Creado",
     "Error. Vuelva a intentar",
@@ -234,7 +234,7 @@ export const player = async ({ body: { id } }, res) => {
     },
   ];
 
-  const { status, error, success } = await usePromises(
+  const { status, error, success } = await queryBatchExe(
     querys,
     "Datos de usuario",
     "Error en datos de usuario"

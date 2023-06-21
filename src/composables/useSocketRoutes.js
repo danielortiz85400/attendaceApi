@@ -1,4 +1,4 @@
-import { usePromises } from './usePromises.js'
+import { queryBatchExe } from './queryBatchExe.js'
 import Jwt from 'jsonwebtoken'
 import { pool } from '../db.js'
 import { jwt } from '../configEnv.js'
@@ -30,7 +30,7 @@ export const emitUpdateUser = async (jwtCookie, emitsRoutes = [], emitsAll) => {
       values: [row[0].id]
     }
   ]
-  const { success } = await usePromises(queryUpdate)
+  const { success } = await queryBatchExe(queryUpdate)
 
   const resp = {
     success: {

@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 import { v4 as uuidv4 } from 'uuid'
-import { usePromises } from '../../composables/usePromises.js'
+import { queryBatchExe } from '../../composables/queryBatchExe.js'
 import { io } from '../../index.js'
 import { useSocketInit } from '../../composables/useSocketInit.js'
 
@@ -35,7 +35,7 @@ export const createSquads = async ({ body }, res) => {
     }
   ]
 
-  const { status, error, success } = await usePromises(
+  const { status, error, success } = await queryBatchExe(
     querys,
     ' Grupo activo',
     'Error. Intente de nuevo.',
@@ -78,7 +78,7 @@ export const deleteSquads = async ({ body }, res) => {
       ]
     }
   ]
-  const { status, error, success } = await usePromises(
+  const { status, error, success } = await queryBatchExe(
     querys,
     ' Grupo eliminado',
     'Error. Intente de nuevo.',

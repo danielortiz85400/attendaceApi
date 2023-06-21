@@ -1,5 +1,4 @@
-import { pool } from "../db.js";
-
+import { queryBatchExe } from "../composables/queryBatchExe.js";
 /**
  * Servicio para validar la confirmación de usuarios.
  * @param {Express.Response} res -Objeto para responder
@@ -8,10 +7,9 @@ import { pool } from "../db.js";
  */
 export const vlteConfirmation = async (res, [...querys]) => {
   try {
-    const Query = await Promise.all(
-      querys.map(({ cols, values }) => pool.query(cols, values))
-    );
-    const errorIndex = Object.values(Query)
+    
+    const {success} =  await queryBatchExe(querys)
+    const errorIndex = Object.values(success.fullbody)
       .map(([[resp]]) => resp)
       .findIndex((i) => i !== undefined);
     if (errorIndex === -1) return { granted: true };

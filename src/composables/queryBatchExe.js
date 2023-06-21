@@ -1,6 +1,6 @@
 import { pool } from '../db.js'
 
-export const usePromises = async ([...querys], sccsMssg = '', errMssg = '', fns) => {
+export const queryBatchExe = async ([...querys], sccsMssg = '', errMssg = '', fns) => {
   let connection
   try {
     connection = await pool.getConnection()
