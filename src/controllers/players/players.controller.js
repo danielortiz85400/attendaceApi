@@ -1,8 +1,8 @@
 /* eslint-disable camelcase */
-import { pool } from "../../db.js" 
+import { pool } from "../../db.js";
 import { io } from "../../index.js";
 import { v4 as uuidv4 } from "uuid";
-import { encryptPassword } from  "../../utils/hashPasswords.js"
+import { encryptPassword } from "../../utils/hashPasswords.js";
 import { jwtCreate } from "../../utils/jsonWebToken.js";
 import { emailJwt } from "../../configEnv.js";
 import { queryBatchExe } from "../../composables/queryBatchExe.js";
@@ -15,9 +15,9 @@ import {
 
 // CANCELACIÓN DE ASISTENCIA A CS
 /** Necesita obligatoriamente req.cookie */
-export const cancelConfirmation = async ({body, cookies}, res) => {
+export const cancelConfirmation = async ({ body, cookies }, res) => {
   const jwtCookie = cookies?.refreshToken;
-  const { id, update_on } = body; 
+  const { id, update_on } = body;
   const [isInSquad] = await pool.query(
     "SELECT * FROM players WHERE id_signup_player = ?",
     [id]
@@ -30,8 +30,8 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
       },
     });
   }
-   const authorized =  vlteCancelTime(res, update_on);
-   if(authorized?.granted){
+  const authorized = vlteCancelTime(res, update_on);
+  if (authorized?.granted) {
     const querys = [
       {
         cols: "DELETE FROM attendance_notifications WHERE id_signup_player  = ?",
@@ -46,7 +46,7 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
         values: [false, id],
       },
     ];
-  
+
     const { status, error, success } = await queryBatchExe(
       querys,
       "Asistencia cancelada",
@@ -59,9 +59,9 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
         allNotifications();
       }
     );
-  
+
     res.status(status).json({ status, resp: success ?? error });
-  
+
     await emitUpdateUser(jwtCookie, [
       {
         name: "userInit",
@@ -69,13 +69,12 @@ export const cancelConfirmation = async ({body, cookies}, res) => {
       },
     ]);
   }
-
- 
 };
 
 // CONFIRMACIÓN DE ASISTENCIA A CS
 /** Necesita obligatoriamente req.cookie */
-export const assisConfirmation = async ({body, cookies}, res) => {
+//! Añadir vlteCancelTime() para el control de confirmación
+export const assisConfirmation = async ({ body, cookies }, res) => {
   const { nick, ctr, id, name_server } = body;
 
   try {
@@ -92,7 +91,7 @@ export const assisConfirmation = async ({body, cookies}, res) => {
       },
     ];
     // Validate confirmation
-    const authorized = await vlteConfirmation(res ,querysVlteConfirmation);
+    const authorized = await vlteConfirmation(res, querysVlteConfirmation);
     if (authorized?.granted) {
       const [{ insertId }] = await pool.query(
         "INSERT INTO confirmed_players VALUES (?,?,?,?,?,?)",
@@ -109,28 +108,12 @@ export const assisConfirmation = async ({body, cookies}, res) => {
         },
       ];
       await queryBatchExe(confirmUpdateQuerys);
-      // Notificación al confirmar asistencia.
-      // await pool.query(
-      //   "INSERT INTO attendance_notifications (id, id_signup_player, active) VALUES (?,?, ?) ",
-      //   [null, id, true]
-      // );
-      // // Actualizar campo attendance del jugador que confirma
-      // await pool.query(
-      //   "UPDATE signup_players SET attendance = ? WHERE id = ?",
-      //   [true, id]
-      // );
 
       const [attNotify] = await pool.query(
         // eslint-disable-next-line quotes
         `SELECT * FROM attendance_notifications attn INNER JOIN confirmed_players cp ON attn.id_signup_player = cp.id_signup_player WHERE cp.id = ?`,
         [insertId]
       );
-
-      // // Actualizar campo attendance del jugador que confirma
-      // await pool.query(
-      //   "UPDATE signup_players SET attendance = ? WHERE id = ?",
-      //   [true, id]
-      // );
 
       const [[player]] = await pool.query(
         "SELECT * FROM confirmed_players WHERE id = ?",
@@ -164,7 +147,6 @@ export const assisConfirmation = async ({body, cookies}, res) => {
         usuario: resp,
       });
     }
-
   } catch (error) {
     console.log(error);
 
