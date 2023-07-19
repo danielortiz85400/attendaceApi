@@ -1,5 +1,6 @@
 import { emitUpdateUser } from '../composables/useSocketRoutes.js'
 
+// Emite la información del nuevo token de autenticación.
 export const refreshJwt = async (req, res) => {
   try {
     const jwtCookie = req.cookies?.refreshToken
