@@ -198,17 +198,18 @@ export const signUpPlayer = async ({ body }, res) => {
 
 // INFORMACIÓN POR JUGADOR (UNO)
 export const player = async ({ body: { id } }, res) => {
+  console.log(id);
   const querys = [
     {
-      cols: `SELECT signup_players.*, squad.name_tactic, players.leader
-      FROM players
+      cols: `SELECT signup_players.*, squad.name_tactic, p.leader
+      FROM players p
       INNER JOIN signup_players ON players.id_signup_player = signup_players.id
       INNER JOIN squad ON squad.id = players.id_squad 
       WHERE id_squad = (SELECT id_squad FROM players WHERE id_signup_player = ?)`,
       values: [id],
     },
     {
-      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server 
+      cols: `SELECT sp.id, sp.nick, sp.name, sp.ctr, sp.phone, sp.attendance, sp.name_server
       FROM signup_players sp 
       INNER JOIN sign_in si on sp.id_signin = si.id 
       WHERE si.id = ?`,
