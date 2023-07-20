@@ -7,19 +7,22 @@ import { router as squadRoutes } from "./routes/squads.route.js";
 
 export const app = express();
 
-// CONFIG
-[
+
+  // CONFIG
+const config = [  
   express.json(),
   cookieParser(),
   cors({
     origin: process.env.ORIGIN,
     credentials: true,
-  }),
-].map((r) => app.use(r));
+  })
+]
+config.map((r) => app.use(r));
 
 // ROUTES
-[
+const routes = [
   { name: "/api", route: AuthRoutes },
   { name: "/api/players", route: playerRoutes },
   { name: "/api/squads", route: squadRoutes },
-].map(({ name, route }) => app.use(name, route));
+]
+routes.map(({ name, route }) => app.use(name, route));

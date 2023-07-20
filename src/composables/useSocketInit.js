@@ -1,19 +1,31 @@
 import { pool } from "../db.js";
+import { cache } from "../index.js";
 export const useSocketInit = (socket) => {
   //* TODOS LOS JUGADORES REGISTRADOS
+
   const allPlayers = () => {
+    const cacheAllPlayers = cache.get("cacheAllPlayers");
+    if (cacheAllPlayers) return socket.emit("allSignupPlayers", cacheAllPlayers);
+      
     pool.query("SELECT * FROM signup_players").then(([rows]) => {
+      cache.set("cacheAllPlayers", rows, 120);
       socket.emit("allSignupPlayers", rows);
     });
   };
   //* TODOS LOS JUGADORES CONFIRMADOS AL EVENTO
   const allconfirmPlayers = () => {
+    const cacheAllConfirmPlayers = cache.get("cacheAllConfirmPlayers");
+
+    if (cacheAllConfirmPlayers) return socket.emit("allconfirmPlayers", cacheAllConfirmPlayers);
     pool.query("SELECT * FROM confirmed_players").then(([rows]) => {
+      cache.set("cacheAllConfirmPlayers", rows, 120);
       socket.emit("allconfirmPlayers", rows);
     });
   };
   //* TODOS LOS SQUADS CREADOS
   const allSquads = () => {
+    const cacheAllSquads = cache.get("cacheAllSquads");
+    if (cacheAllSquads) return socket.emit("allSquads", cacheAllSquads);
     pool
       .query(
         `SELECT s.id as id_squad, s.name_tactic,
@@ -38,16 +50,20 @@ export const useSocketInit = (socket) => {
           )
           .map((squads) => squads.sort((a, b) => b.leader - a.leader || 0));
 
+        cache.set("cacheAllSquads", squads, 120);
         socket.emit("allSquads", squads);
       });
   };
   //* TODOS LAS NOTIFICACIONES
   const allNotifications = () => {
+    const cacheAllNotifications = cache.get("cacheAllNotifications");
+    if (cacheAllNotifications) return socket.emit("allNotifications", cacheAllNotifications);
     pool
       .query(
         "SELECT * FROM attendance_notifications an INNER JOIN confirmed_players cp ON an.id_signup_player = cp.id_signup_player WHERE an.active = true"
       )
       .then(([rows]) => {
+        cache.set("cacheAllNotifications", rows, 120);
         socket.emit("allNotifications", rows);
       });
   };
