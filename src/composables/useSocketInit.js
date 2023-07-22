@@ -5,28 +5,33 @@ export const useSocketInit = (socket) => {
 
   const allPlayers = () => {
     const cacheAllPlayers = cache.get("cacheAllPlayers");
-    if (cacheAllPlayers) return socket.emit("allSignupPlayers", cacheAllPlayers);
-      
-    pool.query("SELECT * FROM signup_players").then(([rows]) => {
-      cache.set("cacheAllPlayers", rows, 120);
+    if (cacheAllPlayers)
+      return socket.emit("allSignupPlayers", cacheAllPlayers);
+
+    return pool.query("SELECT * FROM signup_players").then(([rows]) => {
       socket.emit("allSignupPlayers", rows);
+      cache.set("cacheAllPlayers", rows, 120);
+      return { players: rows };
     });
   };
   //* TODOS LOS JUGADORES CONFIRMADOS AL EVENTO
   const allconfirmPlayers = () => {
     const cacheAllConfirmPlayers = cache.get("cacheAllConfirmPlayers");
 
-    if (cacheAllConfirmPlayers) return socket.emit("allconfirmPlayers", cacheAllConfirmPlayers);
-    pool.query("SELECT * FROM confirmed_players").then(([rows]) => {
-      cache.set("cacheAllConfirmPlayers", rows, 120);
+    if (cacheAllConfirmPlayers)
+      return socket.emit("allconfirmPlayers", cacheAllConfirmPlayers);
+
+    return pool.query("SELECT * FROM confirmed_players").then(([rows]) => {
       socket.emit("allconfirmPlayers", rows);
+      cache.set("cacheAllConfirmPlayers", rows, 120);
+      return { confirmPlayer: rows };
     });
   };
   //* TODOS LOS SQUADS CREADOS
   const allSquads = () => {
     const cacheAllSquads = cache.get("cacheAllSquads");
     if (cacheAllSquads) return socket.emit("allSquads", cacheAllSquads);
-    pool
+    return pool
       .query(
         `SELECT s.id as id_squad, s.name_tactic,
         p.id, p.leader,
@@ -50,21 +55,23 @@ export const useSocketInit = (socket) => {
           )
           .map((squads) => squads.sort((a, b) => b.leader - a.leader || 0));
 
-        cache.set("cacheAllSquads", squads, 120);
         socket.emit("allSquads", squads);
+        cache.set("cacheAllSquads", squads, 120);
+        return { squads };
       });
   };
   //* TODOS LAS NOTIFICACIONES
   const allNotifications = () => {
     const cacheAllNotifications = cache.get("cacheAllNotifications");
-    if (cacheAllNotifications) return socket.emit("allNotifications", cacheAllNotifications);
+    if (cacheAllNotifications)
+      return socket.emit("allNotifications", cacheAllNotifications);
     pool
       .query(
         "SELECT * FROM attendance_notifications an INNER JOIN confirmed_players cp ON an.id_signup_player = cp.id_signup_player WHERE an.active = true"
       )
       .then(([rows]) => {
-        cache.set("cacheAllNotifications", rows, 120);
         socket.emit("allNotifications", rows);
+        cache.set("cacheAllNotifications", rows, 120);
       });
   };
   return { allPlayers, allconfirmPlayers, allSquads, allNotifications };

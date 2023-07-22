@@ -3,10 +3,10 @@ import { v4 as uuidv4 } from "uuid";
 import { queryBatchExe } from "../../composables/queryBatchExe.js";
 import { io } from "../../index.js";
 import { useSocketInit } from "../../composables/useSocketInit.js";
+import { cache } from "../../index.js";
 
 // CRATE SQUADS
 export const createSquads = async ({ body }, res) => {
-  console.log(body);
   const { players, tactic, leader, server } = body;
   const leaderId = players.find(
     ({ nick }) => nick === leader
@@ -41,6 +41,8 @@ export const createSquads = async ({ body }, res) => {
     "Error. Intente de nuevo.",
     () => {
       const { allSquads, allconfirmPlayers } = useSocketInit(io);
+      const { squads } = allSquads();
+      cache.set("cacheAllSquads", squads, 120);
       allSquads();
       allconfirmPlayers();
     }
@@ -82,6 +84,8 @@ export const deleteSquads = async ({ body }, res) => {
     "Error. Intente de nuevo.",
     () => {
       const { allSquads, allconfirmPlayers } = useSocketInit(io);
+      const { squads } = allSquads();
+      cache.set("cacheAllSquads", squads, 120);
       allSquads();
       allconfirmPlayers();
     }

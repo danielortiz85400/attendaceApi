@@ -12,6 +12,7 @@ import {
   vlteConfirmation,
   vlteCancelTime,
 } from "../../services/ValidationPlayers.js";
+import { cache } from "../../index.js";
 
 // CANCELACIÓN DE ASISTENCIA A CS
 /** Necesita obligatoriamente req.cookie */
@@ -30,6 +31,8 @@ export const cancelConfirmation = async ({ body, cookies }, res) => {
       },
     });
   }
+
+  //Validación de cancelación
   const authorized = vlteCancelTime(res, update_on);
   if (authorized?.granted) {
     const querys = [
@@ -54,26 +57,25 @@ export const cancelConfirmation = async ({ body, cookies }, res) => {
       () => {
         const { allPlayers, allconfirmPlayers, allNotifications } =
           useSocketInit(io);
+        const { confirmPlayer } = allconfirmPlayers();
+        const { players } = allPlayers();
+        cache.set("cacheAllConfirmPlayers", confirmPlayer, 120);
+        cache.set("cacheAllPlayers", players, 120);
         allconfirmPlayers();
         allPlayers();
         allNotifications();
       }
     );
 
+    // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna queryBatchExe()
     res.status(status).json({ status, resp: success ?? error });
 
-    await emitUpdateUser(jwtCookie, [
-      {
-        name: "userInit",
-        data: [], // userInit(emit de ruta) se pasa vacío ya que sus valores lo retorna queryBatchExe()
-      },
-    ]);
+    await emitUpdateUser(jwtCookie, [{ name: "userInit", data: [] }]);
   }
 };
 
 // CONFIRMACIÓN DE ASISTENCIA A CS
 /** Necesita obligatoriamente req.cookie */
-//! Añadir vlteCancelTime() para el control de confirmación
 export const assisConfirmation = async ({ body, cookies }, res) => {
   const { nick, ctr, id, name_server } = body;
 
@@ -90,7 +92,7 @@ export const assisConfirmation = async ({ body, cookies }, res) => {
         values: [id],
       },
     ];
-    // Validate confirmation
+    //Validación de confirmación
     const authorized = await vlteConfirmation(res, querysVlteConfirmation);
     if (authorized?.granted) {
       const [{ insertId }] = await pool.query(
@@ -137,7 +139,12 @@ export const assisConfirmation = async ({ body, cookies }, res) => {
           },
         ],
         () => {
-          const { allPlayers } = useSocketInit(io);
+          const { allPlayers, allconfirmPlayers } = useSocketInit(io);
+          const { confirmPlayer } = allconfirmPlayers();
+          const { players } = allPlayers();
+          cache.set("cacheAllConfirmPlayers", confirmPlayer, 120);
+          cache.set("cacheAllPlayers", players, 120);
+          allconfirmPlayers();
           allPlayers();
         }
       );
@@ -148,8 +155,6 @@ export const assisConfirmation = async ({ body, cookies }, res) => {
       });
     }
   } catch (error) {
-    console.log(error);
-
     res.status(400).json({
       status: 400,
       resp: { mssg: "Error al confirmar" },
@@ -189,6 +194,8 @@ export const signUpPlayer = async ({ body }, res) => {
     "Error. Vuelva a intentar",
     () => {
       const { allPlayers } = useSocketInit(io);
+      const { players } = allPlayers();
+      cache.set("cacheAllPlayers", players, 120);
       allPlayers();
     }
   );
@@ -198,7 +205,6 @@ export const signUpPlayer = async ({ body }, res) => {
 
 // INFORMACIÓN POR JUGADOR (UNO)
 export const player = async ({ body: { id } }, res) => {
-  console.log(id);
   const querys = [
     {
       cols: `SELECT signup_players.*, squad.name_tactic, p.leader
