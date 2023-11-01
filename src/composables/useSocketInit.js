@@ -60,6 +60,17 @@ export const useSocketInit = (socket) => {
         return { squads };
       });
   };
+  //* TODOS LOS SERVIDORES CREADOS 
+  const allServers = () => {
+    pool
+      .query(
+        "SELECT * FROM servers"
+      )
+      .then(([rows]) => {
+        socket.emit("allServers", rows);
+      });
+  };
+
   //* TODOS LAS NOTIFICACIONES
   const allNotifications = () => {
     const cacheAllNotifications = cache.get("cacheAllNotifications");
@@ -74,5 +85,5 @@ export const useSocketInit = (socket) => {
         cache.set("cacheAllNotifications", rows, 120);
       });
   };
-  return { allPlayers, allconfirmPlayers, allSquads, allNotifications };
+  return { allPlayers, allconfirmPlayers, allSquads, allServers, allNotifications };
 };

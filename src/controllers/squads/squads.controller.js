@@ -37,7 +37,7 @@ export const createSquads = async ({ body }, res) => {
 
   const { status, error, success } = await queryBatchExe(
     querys,
-    " Grupo activo",
+    "Grupo activo",
     "Error. Intente de nuevo.",
     () => {
       const { allSquads, allconfirmPlayers } = useSocketInit(io);
@@ -54,7 +54,6 @@ export const createSquads = async ({ body }, res) => {
 
 // DELETE SQUADS
 export const deleteSquads = async ({ body }, res) => {
-  console.log(body);
   const querys = [
     {
       cols: "DELETE players, squad FROM players LEFT JOIN squad ON squad.id = players.id_squad WHERE players.id_squad = ?;",
@@ -80,7 +79,7 @@ export const deleteSquads = async ({ body }, res) => {
   ];
   const { status, error, success } = await queryBatchExe(
     querys,
-    " Grupo eliminado",
+    "Grupo desarmado",
     "Error. Intente de nuevo.",
     () => {
       const { allSquads, allconfirmPlayers } = useSocketInit(io);

@@ -23,18 +23,22 @@ export const queryBatchExe = async (
       status: 200,
       success: {
         mssg: sccsMssg,
-        fullbody: resp,
-        body: { squad: [resp[0][0]], user: resp[1][0] },
+        fullbody: resp || undefined,  
+        body: {
+          squad: resp[0] ? [resp[0][0]] : undefined, 
+          user: resp[1] ? [resp[1][0]] : undefined,
+        },
+        
       },
     };
   } catch (error) {
-    console.log(error);
     await connection.rollback();
     return {
       status: 400,
-      error: {
-        mssg: errMssg,
-      },
+       error:{
+        mssg: errMssg
+       },
+     
     };
   }
 };

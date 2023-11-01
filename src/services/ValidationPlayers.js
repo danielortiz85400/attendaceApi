@@ -32,7 +32,6 @@ export const vlteConfirmation = async (res, [...querys]) => {
 
     res.status(400).json(deny);
   } catch (error) {
-    console.log(error);
     res.status(400).json({
       status: 400,
       error: {
